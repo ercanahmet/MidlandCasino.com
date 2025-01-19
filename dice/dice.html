@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Midland</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Papyrus', fantasy;
+            background: url('cerceve.png') no-repeat center center fixed;
+            background-size: center;
+            color: rgb(255, 255, 255);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        #container {
+            width: 600px;
+            height: 600px;
+            margin: 20px;
+            border: 0px solid #d9ff00;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            background-color: transparent;
+        }
+
+        #result {
+            font-family: "Papyrus", fantasy;
+            font-size: 290px;
+            color: #ffd000;
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            display: none;
+        }
+
+        .gif-box {
+            width: 340px;
+            height: 220px;
+            border: 2px solid #ffd900;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #333;
+            position: absolute;
+        }
+
+        .top-left { top: 80px; left: 135px; }
+        .bottom-left { bottom: 80px; left: 135px; }
+        .top-right { top: 80px; right: 130px; }
+        .bottom-right { bottom: 80px; right: 130px; }
+        .middle-left { top: 350px; left: 135px; }
+        .middle-right { top: 360px; right: 130px; }
+
+        .gif-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #imageDisplay {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 5;
+            display: none;
+        }
+
+        #spacebar-instruction {
+            font-size: 24px;
+            color: #ffd900;
+            margin-top: 20px;
+        }
+
+        /* New style for the GIF */
+        #header-gif {
+            width: 800px;
+            height: 200px;
+            object-fit: cover;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Replace Midland text with a GIF -->
+    <img id="header-gif" src="midland.gif" alt="Header GIF">
+
+    <!-- GIF Boxes in the 4 corners -->
+    <div class="gif-box top-left">
+        <img src="slot.gif">
+    </div>
+    <div class="gif-box top-right">
+        <img src="power-chainsaw-man-chainsaw-man.gif" alt="GIF 2">
+    </div>
+
+    <!-- New GIFs between left and right -->
+    <div class="gif-box middle-left">
+        <img src="ulvi.gif" alt="New GIF 1">
+    </div>
+    <div class="gif-box middle-right">
+        <img src="money.gif" alt="New GIF 2">
+    </div>
+
+    <div class="gif-box bottom-left">
+        <img src="casino.gif" alt="GIF 3">
+    </div>
+    <div class="gif-box bottom-right">
+        <img src="me-you.gif" alt="GIF 4">
+    </div>
+
+    <div id="container">
+        <div id="result"></div>
+        <!-- Image to display when dice rolls a 1 -->
+        <img id="imageDisplay" src="büllük.jpg" alt="Special Image">
+    </div>
+
+    <!-- Spacebar Instruction -->
+    <div id="spacebar-instruction"></div>
+
+    <!-- Audio Elements -->
+    <audio id="diceSound" src="pipe.mp3" preload="auto"></audio>
+    <audio id="specialSound" src="jackpot.mp3" preload="auto"></audio>
+
+    <script>
+        let scene, camera, renderer, dice;
+        let isRolling = false;
+        let velocityX = 0;
+        let velocityY = 0;
+        let velocityZ = 0;
+        let angularVelocityX = 0;
+        let angularVelocityY = 0;
+        let angularVelocityZ = 0;
+
+        const gravity = -0.005;
+        const boxSize = 3;
+        const stopThreshold = 0.005;
+        const friction = 0.98;
+        const angularFriction = 0.94;
+        const groundLevel = -boxSize;
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, 600 / 600, 0.1, 1000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(600, 600);
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const pointLight = new THREE.PointLight(0xffffff, 1);
+            pointLight.position.set(5, 5, 5);
+            scene.add(pointLight);
+
+            const geometry = new THREE.IcosahedronGeometry(1);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x00BCE3,
+                flatShading: true
+            });
+            dice = new THREE.Mesh(geometry, material);
+            scene.add(dice);
+
+            camera.position.z = 7;
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isRolling) {
+                velocityY += gravity;
+
+                dice.position.x += velocityX;
+                dice.position.y += velocityY;
+                dice.position.z += velocityZ;
+
+                dice.rotation.x += angularVelocityX;
+                dice.rotation.y += angularVelocityY;
+                dice.rotation.z += angularVelocityZ;
+
+                if (dice.position.y <= groundLevel) {
+                    dice.position.y = groundLevel;
+                    velocityY *= -0.6;
+                    angularVelocityX *= 0.8;
+                    angularVelocityY *= 0.8;
+                    angularVelocityZ *= 0.8;
+                }
+
+                if (Math.abs(dice.position.x) >= boxSize) {
+                    dice.position.x = Math.sign(dice.position.x) * boxSize;
+                    velocityX *= -0.8;
+                }
+                if (Math.abs(dice.position.z) >= boxSize) {
+                    dice.position.z = Math.sign(dice.position.z) * boxSize;
+                    velocityZ *= -0.8;
+                }
+
+                velocityX *= friction;
+                velocityY *= friction;
+                velocityZ *= friction;
+                angularVelocityX *= angularFriction;
+                angularVelocityY *= angularFriction;
+                angularVelocityZ *= angularFriction;
+
+                if (
+                    Math.abs(velocityX) < stopThreshold &&
+                    Math.abs(velocityY) < stopThreshold &&
+                    Math.abs(velocityZ) < stopThreshold &&
+                    Math.abs(angularVelocityX) < stopThreshold &&
+                    Math.abs(angularVelocityY) < stopThreshold &&
+                    Math.abs(angularVelocityZ) < stopThreshold
+                ) {
+                    isRolling = false;
+                    const result = Math.floor(Math.random() * 20) + 1;
+                    const resultDiv = document.getElementById('result');
+                    resultDiv.textContent = result; 
+                    resultDiv.style.display = 'block'; 
+
+                    if (result === 1) {
+                        const imageDisplay = document.getElementById('imageDisplay');
+                        imageDisplay.style.display = 'block'; 
+                    } else {
+                        const imageDisplay = document.getElementById('imageDisplay');
+                        imageDisplay.style.display = 'none'; 
+                    }
+
+                    // Play the special sound if result is 20
+                    const specialSound = document.getElementById('specialSound');
+                    const diceSound = document.getElementById('diceSound');
+                    if (result === 20 && specialSound) {
+                        specialSound.play().catch((e) => console.error('Special audio play error:', e));
+                    } else if (diceSound) {
+                        diceSound.play().catch((e) => console.error('Dice audio play error:', e));
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function rollDice() {
+            if (isRolling) return;
+
+            isRolling = true;
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+
+            dice.position.set(0, 5, 0);
+
+            velocityX = (Math.random() - 0.5) * 0.4;
+            velocityY = Math.random() * -0.2;
+            velocityZ = (Math.random() - 0.5) * 0.4;
+
+            angularVelocityX = (Math.random() - 0.5) * 0.6;
+            angularVelocityY = (Math.random() - 0.5) * 0.6;
+            angularVelocityZ = (Math.random() - 0.5) * 0.6;
+
+            const diceSound = document.getElementById('diceSound');
+            if (diceSound) {
+                diceSound.play().catch((e) => console.error('Audio play error:', e));
+            }
+        }
+
+        document.body.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                rollDice();
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>
